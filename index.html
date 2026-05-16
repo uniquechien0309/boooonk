@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOOOOOONK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            touch-action: manipulation;
+            overflow: hidden;
+            user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* 遊戲區域 */
+        .game-area {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            cursor: pointer;
+            margin: 0 auto;
+        }
+
+        /* 狗狗的共用設定 */
+        .dog-svg {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 250px;
+            height: 250px;
+            transition: all 0.05s ease;
+        }
+
+        /* 被打狀態預設隱藏 */
+        .dog-bonked {
+            display: none;
+        }
+
+        /* 打擊時的切換 */
+        .is-bonking .dog-normal {
+            display: none;
+        }
+
+        .is-bonking .dog-bonked {
+            display: block;
+            /* 讓被打扁的狗狗貼齊底部 */
+            transform: translateX(-50%) scaleY(0.8) translateY(20px); 
+        }
+
+        /* 球棒 */
+        .bat-container {
+            position: absolute;
+            top: 20px;
+            right: -60px;
+            width: 180px;
+            height: auto;
+            transform-origin: bottom right;
+            transform: rotate(60deg);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 球棒揮擊動畫 */
+        .is-bonking .bat-container {
+            animation: swingBat 0.1s forwards;
+            opacity: 1;
+        }
+
+        @keyframes swingBat {
+            0% { transform: rotate(60deg) translate(20px, -40px); }
+            100% { transform: rotate(-20deg) translate(-40px, 30px); }
+        }
+
+        /* 彈出文字動畫 */
+        .bonk-text {
+            position: absolute;
+            font-weight: 900;
+            color: #1f2937;
+            font-size: 2.5rem;
+            pointer-events: none;
+            z-index: 50;
+            text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff, 2px -2px 0px #fff, -2px 2px 0px #fff;
+            animation: fadeUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform-origin: center;
+        }
+
+        @keyframes fadeUp {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5) rotate(-10deg); }
+            50% { transform: translate(-50%, -80%) scale(1.2) rotate(5deg); }
+            100% { opacity: 0; transform: translate(-50%, -100%) scale(1) rotate(0deg); }
+        }
+
+        /* 畫面震動 */
+        .shake {
+            animation: shakeScreen 0.1s infinite;
+        }
+
+        @keyframes shakeScreen {
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            20% { transform: translate(-2px, -3px) rotate(-1deg); }
+            40% { transform: translate(-4px, 0px) rotate(2deg); }
+            60% { transform: translate(4px, 3px) rotate(0deg); }
+            80% { transform: translate(2px, -2px) rotate(1deg); }
+            100% { transform: translate(-2px, 3px) rotate(-2deg); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen">
+
+    <div class="text-center mb-6">
+        <h1 class="text-5xl font-black text-gray-800 tracking-widest">BOOOOOONK</h1>
+        <div class="mt-4 text-3xl font-mono bg-white px-6 py-3 rounded-2xl shadow-sm border-2 border-gray-200 inline-block font-bold text-orange-500">
+            Hits: <span id="counter" class="text-gray-800">0</span>
+        </div>
+    </div>
+
+    <!-- 遊戲互動區 -->
+    <div id="game-area" class="game-area">
+        
+        <!-- 正常狀態：一隻笨笨的馬鈴薯狗 -->
+        <svg class="dog-svg dog-normal" viewBox="0 0 250 250">
+            <!-- 尾巴/後腿 -->
+            <ellipse cx="60" cy="190" rx="35" ry="25" fill="#c47735"/>
+            <!-- 胖嘟嘟馬鈴薯身體 -->
+            <path d="M 50 200 C 10 100, 100 60, 150 100 C 190 140, 190 190, 130 220 C 80 240, 50 230, 50 200 Z" fill="#d68a47"/>
+            <!-- 肚子白毛 -->
+            <path d="M 75 200 C 50 130, 110 100, 140 120 C 170 150, 160 200, 110 215 Z" fill="#f3ce9e"/>
+            <!-- 呆萌前腳 -->
+            <rect x="90" y="195" width="18" height="35" rx="9" fill="#d68a47" transform="rotate(-15 90 195)"/>
+            <rect x="135" y="200" width="18" height="35" rx="9" fill="#f3ce9e" transform="rotate(-5 135 200)"/>
+            <!-- 頭部 -->
+            <ellipse cx="160" cy="105" rx="45" ry="40" fill="#d68a47"/>
+            <!-- 耳朵 -->
+            <polygon points="130,70 140,40 160,70" fill="#d68a47"/>
+            <polygon points="165,65 190,45 185,75" fill="#d68a47"/>
+            <polygon points="134,68 140,50 155,68" fill="#f3ce9e"/> <!-- 內耳 -->
+            <!-- 嘴邊肉 -->
+            <ellipse cx="180" cy="125" rx="30" ry="22" fill="#f3ce9e"/>
+            <ellipse cx="190" cy="115" rx="20" ry="15" fill="#fce4c8"/>
+            <!-- 鼻子 -->
+            <ellipse cx="208" cy="110" rx="8" ry="6" fill="#222"/>
+            <!-- 鄙視的眼神 (一條斜線) -->
+            <line x1="155" y1="92" x2="175" y2="95" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+
+        <!-- 被打狀態：整個壓扁、眼睛痛到閉起來 -->
+        <svg class="dog-svg dog-bonked" viewBox="0 0 250 250">
+            <!-- 壓扁的身體 -->
+            <path d="M 30 220 C 0 150, 100 130, 160 150 C 220 180, 210 230, 130 240 C 70 250, 40 240, 30 220 Z" fill="#d68a47"/>
+            <path d="M 60 225 C 30 170, 110 150, 150 170 C 190 190, 180 230, 120 235 Z" fill="#f3ce9e"/>
+            <!-- 壓扁的頭 -->
+            <ellipse cx="165" cy="165" rx="50" ry="30" fill="#d68a47"/>
+            <!-- 痛到往兩旁垂的耳朵 -->
+            <polygon points="120,160 100,165 115,180" fill="#d68a47"/>
+            <polygon points="210,160 230,165 215,180" fill="#d68a47"/>
+            <!-- 擠成一團的臉頰 -->
+            <ellipse cx="185" cy="175" rx="35" ry="18" fill="#f3ce9e"/>
+            <ellipse cx="215" cy="172" rx="9" ry="5" fill="#222"/> <!-- 鼻子 -->
+            <!-- 痛苦的眼睛 ( >< ) -->
+            <path d="M 155 155 L 165 160 L 155 165" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 185 157 L 175 162 L 185 167" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+
+        <!-- 球棒 -->
+        <div class="bat-container">
+            <svg viewBox="0 0 200 40" width="100%" height="100%">
+                <!-- 棒身 -->
+                <path d="M 180 5 Q 195 5 195 20 Q 195 35 180 35 L 40 30 L 40 10 Z" fill="#d4a373"/>
+                <!-- 握把與底部 -->
+                <rect x="10" y="10" width="30" height="20" fill="#333"/>
+                <rect x="5" y="8" width="5" height="24" rx="2" fill="#bc6c25"/>
+                <!-- 黑色膠帶裝飾 -->
+                <polygon points="100,8 110,8 105,32 95,32" fill="#333"/>
+                <polygon points="120,7 130,7 125,33 115,33" fill="#333"/>
+            </svg>
+        </div>
+
+    </div>
+
+    <script>
+        const counterDisplay = document.getElementById('counter');
+        const body = document.body;
+        let count = 0;
+        let isBonking = false;
+        
+        // 音效系統
+        let audioCtx = null;
+
+        function playBonkSound() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            // 製造「碰」的鈍器音效
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(100, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // 產生浮動的 *BONK* 文字
+        function createBonkText(x, y) {
+            const text = document.createElement('div');
+            text.className = 'bonk-text';
+            text.innerText = '*BONK*';
+            
+            // 加上一點隨機偏移，讓每次打擊文字出現位置有一點點不一樣
+            const randomOffsetX = (Math.random() - 0.5) * 40;
+            const randomOffsetY = (Math.random() - 0.5) * 40;
+            
+            text.style.left = (x + randomOffsetX) + 'px';
+            text.style.top = (y + randomOffsetY) + 'px';
+            
+            document.body.appendChild(text);
+
+            // 動畫結束後移除元素
+            setTimeout(() => {
+                text.remove();
+            }, 400);
+        }
+
+        function doBonk(e) {
+            if (isBonking) return;
+            isBonking = true;
+
+            count++;
+            counterDisplay.innerText = count;
+
+            playBonkSound();
+
+            body.classList.add('is-bonking');
+            body.classList.add('shake');
+
+            // 取得點擊位置，如果沒點在狗狗身上，就以畫面正中央作為文字彈出點
+            const clickX = e.clientX || (e.touches ? e.touches[0].clientX : window.innerWidth / 2);
+            const clickY = e.clientY || (e.touches ? e.touches[0].clientY : window.innerHeight / 2 - 50);
+            
+            createBonkText(clickX, clickY);
+
+            // 0.15 秒後恢復原狀
+            setTimeout(() => {
+                body.classList.remove('is-bonking');
+                body.classList.remove('shake');
+                isBonking = false;
+            }, 150);
+        }
+
+        // 註冊點擊與觸控事件 (點擊整個螢幕有效)
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 0) doBonk(e);
+        });
+
+        window.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            doBonk(e);
+        }, { passive: false });
+
+    </script>
+</body>
+</html>
