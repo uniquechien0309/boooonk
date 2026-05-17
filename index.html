@@ -2,387 +2,491 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BOOOOOONK</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            background-color: #f3f4f6;
-            touch-action: manipulation;
-            overflow: hidden;
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
             user-select: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* 遊戲區域 */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f3f4f6;
+            touch-action: none;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 神聖光束 (升天時顯示) */
+        .heaven-beam {
+            position: absolute;
+            top: 0; 
+            left: 50%; 
+            transform: translateX(-50%);
+            width: 100vw; 
+            height: 100vh;
+            background: radial-gradient(ellipse at top, rgba(255, 255, 180, 0.7) 0%, transparent 80%);
+            opacity: 0; 
+            pointer-events: none; 
+            transition: opacity 2s ease;
+            z-index: 5;
+        }
+        body.is-ascended .heaven-beam { opacity: 1; }
+
+        /* 遊戲區域尺寸 */
         .game-area {
             position: relative;
-            width: 300px;
-            height: 300px;
-            cursor: pointer;
-            margin: 0 auto;
+            width: 280px;
+            height: 280px;
+            margin: 15px auto;
+            z-index: 10;
         }
 
-        /* 狗狗的共用設定 */
+        @media (min-width: 640px) {
+            .game-area {
+                width: 320px;
+                height: 320px;
+            }
+        }
+
+        /* 狗狗包裝層 (用於升天動畫) */
+        .dog-wrapper {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            transform-origin: bottom center;
+            transition: transform 0s, opacity 0s;
+        }
+
+        /* 升天動畫 */
+        .dog-wrapper.ascend-anim {
+            /* 把時間從 4 秒拉長到 7 秒，並讓消失也變得更緩慢 */
+            transition: transform 7s cubic-bezier(0.25, 1, 0.5, 1), opacity 5s ease-in;
+            transform: translateY(-120vh); /* 飄出螢幕 */
+            opacity: 0;
+        }
+
         .dog-svg {
             position: absolute;
             bottom: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 250px;
-            height: 250px;
-            transition: all 0.05s ease;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
 
-        /* 被打狀態預設隱藏 */
-        .dog-bonked {
-            display: none;
-        }
-
-        /* 打擊時的切換 */
-        .is-bonking .dog-normal {
-            display: none;
-        }
-
-        .is-bonking .dog-bonked {
+        .dog-bonked { display: none; }
+        .is-bonking .dog-normal { display: none; }
+        .is-bonking .dog-bonked { 
             display: block;
-            /* 讓被打扁的狗狗貼齊底部 */
-            transform: translateX(-50%) scaleY(0.8) translateY(20px); 
+            transform: translateX(-50%) scaleY(0.75) translateY(20px); 
         }
 
-        /* 武器共用設定 */
+        /* 武器 */
         .weapon-container {
             position: absolute;
-            top: 20px;
-            right: -60px;
-            width: 180px;
-            height: auto;
-            transform-origin: bottom right;
-            opacity: 0;
+            top: 5%;
+            right: -10%;
+            width: 60%;
             pointer-events: none;
-            display: none; /* 預設隱藏，透過 JS 控制顯示 */
+            opacity: 0;
+            display: none;
+            z-index: 20;
+            transform-origin: bottom right;
         }
 
-        /* 顯示目前選擇的武器 */
         .weapon-bat .weapon-bat-svg,
-        .weapon-hand .weapon-hand-svg {
-            display: block;
-        }
+        .weapon-hand .weapon-hand-svg { display: block; }
+        .weapon-bat-svg { transform: rotate(75deg); }
+        .weapon-hand-svg { transform: rotate(45deg); }
 
-        /* 球棒初始位置 */
-        .weapon-bat-svg {
-            transform: rotate(80deg);
-        }
-
-        /* 手初始位置 */
-        .weapon-hand-svg {
-            transform: rotate(45deg);
-        }
-
-        /* 揮擊動畫 - 球棒 */
-        .is-bonking .weapon-bat-svg {
-            animation: swingBat 0.1s forwards;
-            opacity: 1;
-        }
-
-        /* 揮擊動畫 - 手 */
-        .is-bonking .weapon-hand-svg {
-            animation: swingHand 0.1s forwards;
-            opacity: 1;
-        }
+        .is-bonking .weapon-bat-svg { animation: swingBat 0.1s forwards; opacity: 1; }
+        .is-bonking .weapon-hand-svg { animation: swingHand 0.1s forwards; opacity: 1; }
 
         @keyframes swingBat {
-            0% { transform: rotate(80deg) translate(0px, -10px); }
-            100% { transform: rotate(-10deg) translate(-30px, 10px); }
+            0% { transform: rotate(75deg) translate(10px, -10px); }
+            100% { transform: rotate(-15deg) translate(-35px, 35px); }
         }
 
         @keyframes swingHand {
-            0% { transform: rotate(45deg) translate(10px, -20px); }
-            100% { transform: rotate(-30deg) translate(-30px, 10px); }
+            0% { transform: rotate(45deg) translate(5px, -5px); }
+            100% { transform: rotate(-25deg) translate(-25px, 25px); }
         }
 
-        /* 彈出文字動畫 */
+        /* 彈出文字 */
         .bonk-text {
-            position: absolute;
+            position: fixed;
             font-weight: 900;
             color: #1f2937;
-            font-size: 2.5rem;
+            font-size: 1.6rem;
             pointer-events: none;
-            z-index: 50;
-            text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff, 2px -2px 0px #fff, -2px 2px 0px #fff;
-            animation: fadeUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            transform-origin: center;
+            z-index: 100;
+            text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff;
+            animation: fadeUp 0.4s ease-out forwards;
+            white-space: nowrap;
         }
 
         @keyframes fadeUp {
-            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5) rotate(-10deg); }
-            50% { transform: translate(-50%, -80%) scale(1.2) rotate(5deg); }
-            100% { opacity: 0; transform: translate(-50%, -100%) scale(1) rotate(0deg); }
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.7); }
+            100% { opacity: 0; transform: translate(-50%, -130%) scale(1); }
         }
 
-        /* 畫面震動 */
-        .shake {
-            animation: shakeScreen 0.1s infinite;
-        }
-
+        .shake { animation: shakeScreen 0.1s linear; }
         @keyframes shakeScreen {
-            0% { transform: translate(2px, 2px) rotate(0deg); }
-            20% { transform: translate(-2px, -3px) rotate(-1deg); }
-            40% { transform: translate(-4px, 0px) rotate(2deg); }
-            60% { transform: translate(4px, 3px) rotate(0deg); }
-            80% { transform: translate(2px, -2px) rotate(1deg); }
-            100% { transform: translate(-2px, 3px) rotate(-2deg); }
+            0%, 100% { transform: translate(0,0); }
+            25% { transform: translate(3px, 3px); }
+            75% { transform: translate(-3px, -3px); }
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen relative z-0">
+<body>
 
-    <div class="text-center mb-6 relative z-10 pointer-events-none">
-        <h1 class="text-5xl font-black text-gray-800 tracking-widest">BOOOOOONK</h1>
-        <div class="mt-4 text-3xl font-mono bg-white px-6 py-3 rounded-2xl shadow-sm border-2 border-gray-200 inline-block font-bold text-orange-500">
+    <!-- 神聖光束 (預設隱藏) -->
+    <div class="heaven-beam"></div>
+
+    <!-- 頂部計數器 UI -->
+    <div class="relative z-10 flex flex-col items-center pointer-events-none w-full mt-4">
+        <h1 class="text-5xl font-black text-gray-800 tracking-tighter mb-2">BOOOOOONK</h1>
+        
+        <div class="text-2xl font-mono bg-white/90 backdrop-blur px-6 py-2 rounded-2xl shadow-md border border-gray-200 inline-block font-bold text-orange-500">
             Hits: <span id="counter" class="text-gray-800">0</span>
         </div>
         
-        <!-- 武器選擇按鈕 (啟用指標事件，讓按鈕可以按) -->
         <div class="mt-4 flex justify-center space-x-4 pointer-events-auto">
-            <button id="btn-bat" class="w-14 h-14 flex items-center justify-center text-3xl bg-gray-800 text-white rounded-xl shadow-md hover:bg-gray-700 transition-colors border-2 border-transparent focus:border-orange-500 focus:outline-none">
-                🏏
-            </button>
-            <button id="btn-hand" class="w-14 h-14 flex items-center justify-center text-3xl bg-white text-gray-800 rounded-xl shadow-md hover:bg-gray-50 transition-colors border-2 border-gray-200 focus:border-orange-500 focus:outline-none">
-                ✋
-            </button>
+            <button id="btn-bat" class="w-16 h-16 flex items-center justify-center text-3xl bg-gray-800 text-white rounded-2xl shadow-lg border-4 transition-all active:scale-90 outline-none">🏏</button>
+            <button id="btn-hand" class="w-16 h-16 flex items-center justify-center text-3xl bg-white text-gray-800 rounded-2xl shadow-lg border-4 border-gray-100 transition-all active:scale-90 outline-none">✋</button>
         </div>
     </div>
 
-    <!-- 遊戲互動區 (背景鋪滿整個畫面以接收點擊) -->
-    <div id="click-overlay" class="absolute inset-0 z-0 cursor-pointer"></div>
-
-    <div id="game-area" class="game-area z-10 pointer-events-none">
+    <!-- 遊戲動畫主體 -->
+    <div id="game-area" class="game-area">
         
-        <!-- 正常狀態：一隻笨笨的馬鈴薯狗 -->
-        <svg class="dog-svg dog-normal" viewBox="0 0 250 250">
-            <!-- 尾巴/後腿 -->
-            <ellipse cx="60" cy="190" rx="35" ry="25" fill="#c47735"/>
-            <!-- 胖嘟嘟馬鈴薯身體 -->
-            <path d="M 50 200 C 10 100, 100 60, 150 100 C 190 140, 190 190, 130 220 C 80 240, 50 230, 50 200 Z" fill="#d68a47"/>
-            <!-- 肚子白毛 -->
-            <path d="M 75 200 C 50 130, 110 100, 140 120 C 170 150, 160 200, 110 215 Z" fill="#f3ce9e"/>
-            <!-- 呆萌前腳 -->
-            <rect x="90" y="195" width="18" height="35" rx="9" fill="#d68a47" transform="rotate(-15 90 195)"/>
-            <rect x="135" y="200" width="18" height="35" rx="9" fill="#f3ce9e" transform="rotate(-5 135 200)"/>
-            <!-- 頭部 -->
-            <ellipse cx="160" cy="105" rx="45" ry="40" fill="#d68a47"/>
-            <!-- 耳朵 -->
-            <polygon points="130,70 140,40 160,70" fill="#d68a47"/>
-            <polygon points="165,65 190,45 185,75" fill="#d68a47"/>
-            <polygon points="134,68 140,50 155,68" fill="#f3ce9e"/> <!-- 內耳 -->
-            <!-- 嘴邊肉 -->
-            <ellipse cx="180" cy="125" rx="30" ry="22" fill="#f3ce9e"/>
-            <ellipse cx="190" cy="115" rx="20" ry="15" fill="#fce4c8"/>
-            <!-- 鼻子 -->
-            <ellipse cx="208" cy="110" rx="8" ry="6" fill="#222"/>
-            <!-- 鄙視的眼神 (一條斜線) -->
-            <line x1="155" y1="92" x2="175" y2="95" stroke="#222" stroke-width="4" stroke-linecap="round"/>
-        </svg>
-
-        <!-- 被打狀態：整個壓扁、眼睛痛到閉起來 -->
-        <svg class="dog-svg dog-bonked" viewBox="0 0 250 250">
-            <!-- 壓扁的身體 -->
-            <path d="M 30 220 C 0 150, 100 130, 160 150 C 220 180, 210 230, 130 240 C 70 250, 40 240, 30 220 Z" fill="#d68a47"/>
-            <path d="M 60 225 C 30 170, 110 150, 150 170 C 190 190, 180 230, 120 235 Z" fill="#f3ce9e"/>
-            <!-- 壓扁的頭 -->
-            <ellipse cx="165" cy="165" rx="50" ry="30" fill="#d68a47"/>
-            <!-- 痛到往兩旁垂的耳朵 -->
-            <polygon points="120,160 100,165 115,180" fill="#d68a47"/>
-            <polygon points="210,160 230,165 215,180" fill="#d68a47"/>
-            <!-- 擠成一團的臉頰 -->
-            <ellipse cx="185" cy="175" rx="35" ry="18" fill="#f3ce9e"/>
-            <ellipse cx="215" cy="172" rx="9" ry="5" fill="#222"/> <!-- 鼻子 -->
-            <!-- 痛苦的眼睛 ( >< ) -->
-            <path d="M 155 155 L 165 160 L 155 165" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 185 157 L 175 162 L 185 167" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-
-        <!-- 武器容器，用 JS 切換 class 來決定顯示哪一個 -->
-        <div id="weapon-wrapper" class="weapon-bat">
-            <!-- 球棒 SVG -->
-            <div class="weapon-container weapon-bat-svg">
-                <svg viewBox="0 0 200 40" width="100%" height="100%">
-                    <!-- 棒身 (左邊粗，用來打擊) -->
-                    <path d="M 20 5 Q 5 5 5 20 Q 5 35 20 35 L 160 30 L 160 10 Z" fill="#d4a373"/>
-                    <!-- 握把與底部 (右邊細，當作軸心) -->
-                    <rect x="160" y="10" width="30" height="20" fill="#333"/>
-                    <rect x="190" y="8" width="5" height="24" rx="2" fill="#bc6c25"/>
-                    <!-- 黑色膠帶裝飾 -->
-                    <polygon points="100,8 90,8 95,32 105,32" fill="#333"/>
-                    <polygon points="80,7 70,7 75,33 85,33" fill="#333"/>
+        <!-- 將狗狗包裝起來，方便整體升天 -->
+        <div id="dog-wrapper" class="dog-wrapper">
+            
+            <!-- 天使光環 (升天時顯示) -->
+            <div id="halo" class="absolute -top-6 left-1/2 transform -translate-x-1/2 opacity-0 transition-opacity duration-1000 z-10">
+                <svg width="80" height="30" viewBox="0 0 80 30">
+                    <ellipse cx="40" cy="15" rx="35" ry="10" fill="none" stroke="#fbbf24" stroke-width="5" opacity="0.8"/>
+                    <ellipse cx="40" cy="15" rx="35" ry="10" fill="none" stroke="#fef08a" stroke-width="2"/>
                 </svg>
             </div>
-            
-            <!-- 手掌 SVG -->
-            <div class="weapon-container weapon-hand-svg">
-                <svg viewBox="0 0 150 150" width="120%" height="120%">
-                    <!-- 手掌主體 -->
-                    <path d="M 40 150 L 50 80 Q 55 60 70 60 Q 85 60 90 80 L 110 150 Z" fill="#fbc39c"/>
-                    <!-- 拇指 -->
-                    <path d="M 45 100 Q 20 100 20 80 Q 20 60 45 80 Z" fill="#fbc39c"/>
-                    <!-- 食指 -->
-                    <path d="M 55 70 L 50 30 Q 50 15 65 15 Q 80 15 75 40 L 75 60 Z" fill="#fbc39c"/>
-                    <!-- 中指 -->
-                    <path d="M 70 65 L 75 20 Q 75 5 90 5 Q 105 5 100 30 L 95 65 Z" fill="#fbc39c"/>
-                    <!-- 無名指 -->
-                    <path d="M 85 70 L 95 35 Q 95 20 110 20 Q 125 20 115 45 L 105 75 Z" fill="#fbc39c"/>
-                    <!-- 小指 -->
-                    <path d="M 100 85 L 115 55 Q 120 45 130 50 Q 140 55 125 75 L 115 95 Z" fill="#fbc39c"/>
-                    <!-- 簡單的手掌紋路 -->
-                    <path d="M 60 110 Q 75 130 90 110" fill="none" stroke="#e8a87c" stroke-width="3" stroke-linecap="round"/>
-                </svg>
+
+            <!-- 正常狗狗 -->
+            <svg class="dog-svg dog-normal" viewBox="0 0 250 250">
+                <ellipse cx="60" cy="190" rx="35" ry="25" fill="#c47735"/>
+                <path d="M 50 200 C 10 100, 100 60, 150 100 C 190 140, 190 190, 130 220 C 80 240, 50 230, 50 200 Z" fill="#d68a47"/>
+                <path d="M 75 200 C 50 130, 110 100, 140 120 C 170 150, 160 200, 110 215 Z" fill="#f3ce9e"/>
+                <rect x="90" y="195" width="18" height="35" rx="9" fill="#d68a47" transform="rotate(-15 90 195)"/>
+                <rect x="135" y="200" width="18" height="35" rx="9" fill="#f3ce9e" transform="rotate(-5 135 200)"/>
+                <ellipse cx="160" cy="105" rx="45" ry="40" fill="#d68a47"/>
+                <polygon points="130,70 140,40 160,70" fill="#d68a47"/>
+                <polygon points="165,65 190,45 185,75" fill="#d68a47"/>
+                <ellipse cx="180" cy="125" rx="30" ry="22" fill="#f3ce9e"/>
+                <ellipse cx="208" cy="110" rx="8" ry="6" fill="#222"/>
+                <line x1="155" y1="92" x2="175" y2="95" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+
+            <!-- 被打狗狗 -->
+            <svg class="dog-svg dog-bonked" viewBox="0 0 250 250">
+                <path d="M 30 220 C 0 150, 100 130, 160 150 C 220 180, 210 230, 130 240 C 70 250, 40 240, 30 220 Z" fill="#d68a47"/>
+                <path d="M 60 225 C 30 170, 110 150, 150 170 C 190 190, 180 230, 120 235 Z" fill="#f3ce9e"/>
+                <ellipse cx="165" cy="165" rx="50" ry="30" fill="#d68a47"/>
+                <ellipse cx="185" cy="175" rx="35" ry="18" fill="#f3ce9e"/>
+                <ellipse cx="215" cy="172" rx="9" ry="5" fill="#222"/>
+                <path d="M 155 155 L 165 160 L 155 165" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+                <path d="M 185 157 L 175 162 L 185 167" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+
+            <div id="weapon-wrapper" class="weapon-bat">
+                <div class="weapon-container weapon-bat-svg">
+                    <svg viewBox="0 0 200 40" width="100%">
+                        <path d="M 20 5 Q 5 5 5 20 Q 5 35 20 35 L 160 30 L 160 10 Z" fill="#d4a373"/>
+                        <rect x="160" y="10" width="30" height="20" fill="#333"/>
+                        <rect x="190" y="8" width="5" height="24" rx="2" fill="#bc6c25"/>
+                    </svg>
+                </div>
+                <div class="weapon-container weapon-hand-svg">
+                    <svg viewBox="0 0 150 150" width="100%">
+                        <path d="M 40 150 L 50 80 Q 55 60 70 60 Q 85 60 90 80 L 110 150 Z" fill="#fbc39c"/>
+                        <path d="M 45 100 Q 20 100 20 80 Q 20 60 45 80 Z" fill="#fbc39c"/>
+                        <path d="M 55 70 L 50 30 Q 50 15 65 15 Q 80 15 75 40 L 75 60 Z" fill="#fbc39c"/>
+                        <path d="M 70 65 L 75 20 Q 75 5 90 5 Q 105 5 100 30 L 95 65 Z" fill="#fbc39c"/>
+                    </svg>
+                </div>
             </div>
         </div>
+    </div>
 
+    <!-- 簡單版圓形發射按鈕遮罩層 -->
+    <div id="start-overlay" class="fixed inset-0 z-[200] flex items-center justify-center transition-opacity duration-300">
+        <button id="btn-start" class="w-28 h-28 bg-red-600 text-white rounded-full font-black text-2xl shadow-lg border-4 border-white/20 active:scale-95 transition-all outline-none" style="opacity: 0.8;">
+            START
+        </button>
     </div>
 
     <script>
-        const counterDisplay = document.getElementById('counter');
-        const body = document.body;
-        const weaponWrapper = document.getElementById('weapon-wrapper');
-        const clickOverlay = document.getElementById('click-overlay');
+        // 遊戲狀態機： 'waiting' (等按鈕), 'playing' (遊玩中), 'ascended' (升天動畫中)
+        let gameState = 'waiting'; 
         
-        // 武器按鈕
+        const counterDisplay = document.getElementById('counter');
+        const weaponWrapper = document.getElementById('weapon-wrapper');
         const btnBat = document.getElementById('btn-bat');
         const btnHand = document.getElementById('btn-hand');
+        
+        const dogWrapper = document.getElementById('dog-wrapper');
+        const startOverlay = document.getElementById('start-overlay');
+        const btnStart = document.getElementById('btn-start');
+        const halo = document.getElementById('halo');
 
         let count = 0;
         let isBonking = false;
-        let currentWeapon = 'bat'; // 'bat' 或 'hand'
+        let currentWeapon = 'bat';
+        let targetAscendCount = 0;
         
-        // 音效系統
         let audioCtx = null;
 
-        // 武器切換邏輯
-        function setWeapon(weapon) {
-            currentWeapon = weapon;
-            if (weapon === 'bat') {
-                weaponWrapper.className = 'weapon-bat';
-                btnBat.className = 'w-14 h-14 flex items-center justify-center text-3xl bg-gray-800 text-white rounded-xl shadow-md hover:bg-gray-700 transition-colors border-2 border-transparent focus:border-orange-500 focus:outline-none';
-                btnHand.className = 'w-14 h-14 flex items-center justify-center text-3xl bg-white text-gray-800 rounded-xl shadow-md hover:bg-gray-50 transition-colors border-2 border-gray-200 focus:border-orange-500 focus:outline-none';
-            } else {
-                weaponWrapper.className = 'weapon-hand';
-                btnHand.className = 'w-14 h-14 flex items-center justify-center text-3xl bg-gray-800 text-white rounded-xl shadow-md hover:bg-gray-700 transition-colors border-2 border-transparent focus:border-orange-500 focus:outline-none';
-                btnBat.className = 'w-14 h-14 flex items-center justify-center text-3xl bg-white text-gray-800 rounded-xl shadow-md hover:bg-gray-50 transition-colors border-2 border-gray-200 focus:border-orange-500 focus:outline-none';
-            }
-        }
-
-        btnBat.addEventListener('click', (e) => { e.stopPropagation(); setWeapon('bat'); });
-        btnHand.addEventListener('click', (e) => { e.stopPropagation(); setWeapon('hand'); });
-
-        function playSound() {
+        // 點擊開始按鈕啟動遊戲
+        btnStart.addEventListener('click', () => {
+            // 解鎖 AudioContext
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
-
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            if (currentWeapon === 'bat') {
-                // 球棒的聲音：低沉鈍器聲 (Square wave, 低頻)
-                oscillator.type = 'square';
-                oscillator.frequency.setValueAtTime(100, audioCtx.currentTime);
-                oscillator.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                
-                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            } else {
-                // 手掌拍打的聲音：短促清脆聲 (Sawtooth/Triangle, 高頻快速衰減)
-                oscillator.type = 'triangle';
-                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-                oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
-                
-                // 產生稍微有點噪音的感覺，模擬「啪」
-                const noiseNode = audioCtx.createBufferSource();
-                const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
-                const output = buffer.getChannelData(0);
-                for (let i = 0; i < buffer.length; i++) {
-                    output[i] = Math.random() * 2 - 1;
-                }
-                noiseNode.buffer = buffer;
-                
-                const noiseFilter = audioCtx.createBiquadFilter();
-                noiseFilter.type = 'highpass';
-                noiseFilter.frequency.value = 1000;
-                
-                noiseNode.connect(noiseFilter);
-                noiseFilter.connect(gainNode);
-                noiseNode.start(audioCtx.currentTime);
-                
-                gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-            }
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + (currentWeapon === 'bat' ? 0.1 : 0.05));
-        }
-
-        // 產生浮動文字
-        function createText(x, y) {
-            const text = document.createElement('div');
-            text.className = 'bonk-text';
             
-            // 根據武器決定文字
-            text.innerText = currentWeapon === 'bat' ? '*BONK*' : '*SLAP*';
-            
-            const randomOffsetX = (Math.random() - 0.5) * 40;
-            const randomOffsetY = (Math.random() - 0.5) * 40;
-            
-            text.style.left = (x + randomOffsetX) + 'px';
-            text.style.top = (y + randomOffsetY) + 'px';
-            
-            document.body.appendChild(text);
-
-            setTimeout(() => {
-                text.remove();
-            }, 400);
-        }
-
-        function doHit(e) {
-            if (isBonking) return;
-            isBonking = true;
-
-            count++;
-            counterDisplay.innerText = count;
-
-            playSound();
-
-            body.classList.add('is-bonking');
-            body.classList.add('shake');
-
-            const clickX = e.clientX || (e.touches ? e.touches[0].clientX : window.innerWidth / 2);
-            const clickY = e.clientY || (e.touches ? e.touches[0].clientY : window.innerHeight / 2 - 50);
-            
-            createText(clickX, clickY);
-
-            setTimeout(() => {
-                body.classList.remove('is-bonking');
-                body.classList.remove('shake');
-                isBonking = false;
-            }, 150);
-        }
-
-        // 註冊點擊與觸控事件 (點擊背景遮罩層觸發，避免點擊按鈕時也打到狗)
-        clickOverlay.addEventListener('mousedown', (e) => {
-            if (e.button === 0) doHit(e);
+            initGame();
         });
 
-        clickOverlay.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            doHit(e);
+        function initGame() {
+            // 初始化變數
+            count = 0;
+            counterDisplay.innerText = count;
+            isBonking = false;
+            
+            // 隨機抽取 50 到 150 之間的數字作為升天目標
+            targetAscendCount = Math.floor(Math.random() * (150 - 50 + 1)) + 50;
+            
+            // UI 復原
+            document.body.classList.remove('is-ascended');
+            dogWrapper.classList.remove('ascend-anim');
+            halo.classList.remove('opacity-100');
+            halo.classList.add('opacity-0');
+            
+            // 淡出並徹底隱藏遮罩層，避免擋住點擊
+            startOverlay.classList.add('opacity-0');
+            setTimeout(() => {
+                startOverlay.classList.add('hidden');
+                gameState = 'playing';
+            }, 300);
+        }
+
+        // 神聖的天堂和弦音效
+        function playHeavenSound() {
+            if (!audioCtx) return;
+            const t = audioCtx.currentTime;
+            
+            // C 大調和弦
+            const chord = [523.25, 659.25, 783.99]; 
+            chord.forEach((freq, index) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+                
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.3, t + 0.5 + index * 0.2); 
+                // 將神聖音效的殘響也跟著拉長
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 6.5);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + 7);
+            });
+        }
+
+        function playSound() {
+            if (!audioCtx) return;
+            const t = audioCtx.currentTime;
+            
+            if (currentWeapon === 'bat') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(180, t);
+                osc.frequency.exponentialRampToValueAtTime(60, t + 0.15);
+                gain.gain.setValueAtTime(0.9, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + 0.25);
+
+                const attackOsc = audioCtx.createOscillator();
+                const attackGain = audioCtx.createGain();
+                attackOsc.type = 'square';
+                attackOsc.frequency.setValueAtTime(400, t);
+                attackOsc.frequency.exponentialRampToValueAtTime(100, t + 0.05);
+                attackGain.gain.setValueAtTime(0.15, t);
+                attackGain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                
+                attackOsc.connect(attackGain);
+                attackGain.connect(audioCtx.destination);
+                attackOsc.start(t);
+                attackOsc.stop(t + 0.05);
+            } else {
+                const bufferSize = audioCtx.sampleRate * 0.1; 
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1; 
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                const bandpass = audioCtx.createBiquadFilter();
+                bandpass.type = 'bandpass';
+                bandpass.frequency.value = 2500;
+                bandpass.Q.value = 0.5;
+
+                const noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(1.5, t);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+                noise.connect(bandpass);
+                bandpass.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start(t);
+
+                const osc = audioCtx.createOscillator();
+                const oscGain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, t);
+                osc.frequency.exponentialRampToValueAtTime(100, t + 0.05);
+                oscGain.gain.setValueAtTime(0.5, t);
+                oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                
+                osc.connect(oscGain);
+                oscGain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + 0.05);
+            }
+        }
+
+        function ascendDog() {
+            gameState = 'ascended'; // 鎖定螢幕點擊
+            
+            document.body.classList.add('is-ascended');
+            dogWrapper.classList.add('ascend-anim');
+            
+            // 顯示光環
+            halo.classList.remove('opacity-0');
+            halo.classList.add('opacity-100');
+            
+            playHeavenSound();
+            
+            // 動畫結束後，叫出按鈕重新開始 (配合動畫時間拉長到 7 秒)
+            setTimeout(() => {
+                btnStart.innerText = "RESTART";
+                startOverlay.classList.remove('hidden');
+                // 觸發重繪以確保過場動畫生效
+                void startOverlay.offsetWidth;
+                startOverlay.classList.remove('opacity-0');
+                gameState = 'waiting';
+            }, 7000);
+        }
+
+        function handleHit(e) {
+            // 如果不是遊玩狀態（等待開始或正在升天），點擊完全無效
+            if (gameState !== 'playing' || isBonking) return;
+            
+            isBonking = true;
+            count++;
+            counterDisplay.innerText = count;
+            
+            playSound();
+
+            document.body.classList.add('is-bonking', 'shake');
+            
+            const clientX = e.clientX || (e.touches ? e.touches[0].clientX : window.innerWidth / 2);
+            const clientY = e.clientY || (e.touches ? e.touches[0].clientY : window.innerHeight / 2);
+            
+            const t = document.createElement('div');
+            t.className = 'bonk-text';
+            
+            // 若這下觸發升天
+            if (count === targetAscendCount) {
+                t.innerText = '*R.I.P*';
+                t.style.color = '#fbbf24'; // 金黃色
+            } else {
+                t.innerText = currentWeapon === 'bat' ? '*BONK*' : '*SLAP*';
+            }
+            
+            const safeX = Math.max(50, Math.min(window.innerWidth - 50, clientX));
+            t.style.left = safeX + 'px';
+            t.style.top = clientY + 'px';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 400);
+
+            // 動畫延遲處理
+            setTimeout(() => {
+                document.body.classList.remove('shake');
+                document.body.classList.remove('is-bonking');
+                
+                if (count >= targetAscendCount) {
+                    ascendDog();
+                } else {
+                    isBonking = false;
+                }
+            }, 100);
+        }
+
+        function setWeapon(w) {
+            // 切換武器時順便確保音效解鎖
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            
+            currentWeapon = w;
+            weaponWrapper.className = 'weapon-' + w;
+            btnBat.className = `w-16 h-16 flex items-center justify-center text-3xl rounded-2xl shadow-lg border-4 transition-all active:scale-90 ${w === 'bat' ? 'bg-gray-800 border-orange-500 text-white' : 'bg-white border-gray-100 text-gray-800'}`;
+            btnHand.className = `w-16 h-16 flex items-center justify-center text-3xl rounded-2xl shadow-lg border-4 transition-all active:scale-90 ${w === 'hand' ? 'bg-gray-800 border-orange-500 text-white' : 'bg-white border-gray-100 text-gray-800'}`;
+        }
+
+        btnBat.onclick = (e) => { e.stopPropagation(); setWeapon('bat'); };
+        btnHand.onclick = (e) => { e.stopPropagation(); setWeapon('hand'); };
+        
+        // 將打擊事件直接綁定到全域 document，確保絕對能點到 (避開按鈕)
+        document.addEventListener('mousedown', (e) => { 
+            if (e.target.closest('button')) return; // 點擊按鈕時不觸發打狗
+            if (e.button === 0) handleHit(e); 
+        });
+        
+        document.addEventListener('touchstart', (e) => { 
+            if (e.target.closest('button')) return; // 點擊按鈕時不觸發打狗
+            e.preventDefault(); 
+            handleHit(e); 
         }, { passive: false });
+        
+        // 初始設定武器樣式
+        setWeapon('bat');
 
     </script>
 </body>
